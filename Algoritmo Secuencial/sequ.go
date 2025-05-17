@@ -104,7 +104,6 @@ func loadData(csvPath string) ([][]float64, []float64, []float64, error) {
 	id := 0;
 	for {
 		id ++;
-		if id>10000 { break ;}
 		record, err := reader.Read()
 		if err == io.EOF {
 			break
@@ -147,18 +146,36 @@ func loadData(csvPath string) ([][]float64, []float64, []float64, error) {
 }
 
 func main() {
-	// numSamples := 100
-	// X, y := generateData(numSamples, 3)
+	const runs = 100
+	times := make([]string, 0, runs)
 	X, y, weights,er := loadData("heart_1M.csv")
 	if er != nil {
 		fmt.Print(er)
 	}
-	learningRate := 0.1
-	epochs := 1000
-	start := time.Now()
-	weights, costHistory := gradientDescent(X, y, weights, learningRate, epochs)
-	elapsed := time.Since(start)
-	fmt.Printf("Tiempo total de ejecución: %s\n", elapsed)
-	//fmt.Printf("Final Weights: %.4f %.4f %.4f\n", weights[0], weights[1], weights[2])
-	fmt.Printf("Final Cost: %.4f\n", costHistory[len(costHistory)-1])
+	fmt.Printf("Datos cargados")
+	for i := 0; i < runs; i++ {
+		learningRate := 0.005
+		epochs := 10
+		start := time.Now()
+		_, costHistory := gradientDescent(X, y, weights, learningRate, epochs)
+		elapsed := time.Since(start)
+		fmt.Printf("Iteración %d: %s\n", i+1, elapsed)
+		times = append(times, strconv.FormatFloat(elapsed.Seconds(), 'f', 6, 64))
+		fmt.Printf("Final Cost: %.4f\n", costHistory[len(costHistory)-1])
+	}
+	file, err := os.Create("benchmark_results_seq.csv")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	writer.Write([]string{"Ejecución", "Tiempo (segundos)"})
+	for i, t := range times {
+		writer.Write([]string{strconv.Itoa(i + 1), t})
+	}
+
+	fmt.Println("Benchmark finalizado y guardado en benchmark_results_seq.csv")
 }
